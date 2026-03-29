@@ -1,0 +1,26 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Azure VM
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.AZURE_SSH_PRIVATE_KEY }}
+          AZURE_HOST: ${{ secrets.AZURE_HOST }}
+          AZURE_USER: azureuser
+        run: |
+          echo "$SSH_PRIVATE_KEY" > key.pem
+          chmod 400 key.pem
+          ssh -o StrictHostKeyChecking=no -i key.pem $AZURE_USER@$AZURE_HOST "
+            cd /var/www/html
+            sudo git clone https://github.com/${{ github.repository }}.git temp || true
+            sudo cp -r temp/* /var/www/html/
+            sudo rm -rf temp
+            sudo systemctl restart nginx
+          "
